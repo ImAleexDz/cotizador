@@ -1,5 +1,7 @@
 import React, {useState} from 'react';
-import styled from '@emotion/styled'
+import styled from '@emotion/styled';
+import PropTypes from 'prop-types';
+import { getYearDifference, calculate, getPlan } from '../helper';
 
 const Campo = styled.div`
     display: flex;
@@ -41,13 +43,24 @@ const Button = styled.button`
     }
 `;
 
-const Formulario = () => {
+const Error = styled.div`
+    background-color: rgba(250,58,45, 0.8);
+    color: white;
+    padding: 1rem;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 2rem;
+`;
+
+const Formulario = ({setResumen, setCargando}) => {
 
     const [datos, setDatos] = useState({
         marca: '',
         year: '',
         plan: '',
     });
+
+    const [error, setError] = useState(false);
 
     const { marca, year, plan } = datos;
 
@@ -56,10 +69,57 @@ const Formulario = () => {
             ...datos,
             [e.target.name] : e.target.value
         })
+    };
+
+    const cotizarSeguro = e => {
+        e.preventDefault();
+        if(marca.trim() === '' || year.trim() === '' || plan.trim() === '') {
+            setError(true);
+            return;
+        }
+
+        setError(false);
+
+        //Base de 2000
+        let resultado = 2000;
+
+        //Obtener la diferencia de años
+        const diferencia = getYearDifference(year);
+
+        //por cada año hay que restar el 3%
+        resultado -= (( diferencia * 3 ) * resultado) / 100;
+
+        // //Americano 15%
+        // //Asiático 5%
+        // //Europeo 30%
+        resultado = calculate(marca) * resultado;
+
+        //Básico 20%
+        //Completo 50%
+        const incrementoPlan = getPlan(plan);
+        resultado = parseFloat(( incrementoPlan * resultado )).toFixed(2);
+
+        setCargando(true);
+
+        setTimeout(() => {
+            setCargando(false);
+            //Total
+            setResumen({
+                cotizacion: Number(resultado),
+                datos
+        });
+        }, 3000);
+
+        
     }
 
+
+
     return (
-        <form>
+        <form
+            onSubmit={cotizarSeguro}
+        >
+            {error ? <Error>Todos los campos son obligatorios</Error>  : null}
             <Campo>
                 <Label>
                     Marca
@@ -117,9 +177,14 @@ const Formulario = () => {
                 />Completo
             </Campo>
 
-            <Button type="button">Cotizar</Button>
+            <Button type="submit">Cotizar</Button>
         </form>
     )
+}
+
+Formulario.propTypes = {
+    setResumen: PropTypes.func.isRequired,
+    setCargando: PropTypes.func.isRequired
 }
 
 export default Formulario
